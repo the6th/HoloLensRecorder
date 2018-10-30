@@ -43,6 +43,8 @@ public class Work02 : MonoBehaviour
             MyTransform t = new MyTransform();
             t.SetData(Recorder.transform, time);
             myTransforms.Add(t);
+            counter++;
+
         }
         else if (isPlaying)
         {
@@ -71,7 +73,6 @@ public class Work02 : MonoBehaviour
     {
         string title;
         title = (!isRecording ? "録画開始" : "録画中");
-        GUI.Label(new Rect(10, 10, 100, 20), counter.ToString());
 
         if (GUI.Button(new Rect(10, 10, 100, 60), title) && !isPlaying)
         {
@@ -94,6 +95,10 @@ public class Work02 : MonoBehaviour
 
             isPlaying = !isPlaying;
         }
+
+        GUI.Label(new Rect(20, 160, 100, 20), counter.ToString());
+
+
     }
     void StartPlay()
     {
@@ -121,7 +126,7 @@ public class Work02 : MonoBehaviour
         Recorder.transform.localScale = startTrans.Scale;
         var rigdbody = Recorder.GetComponent<Rigidbody>();
         rigdbody.velocity = Vector3.zero;
-   //     rigdbody.angularVelocity = Vector3.zero;
+        //     rigdbody.angularVelocity = Vector3.zero;
         rigdbody.ResetInertiaTensor();
 
         Recorder.SetActive(true);
@@ -135,6 +140,10 @@ public class Work02 : MonoBehaviour
         SaveMessagePack(filename);
     }
 
+    /// <summary>
+    /// シリアライズしてファイルに保存する
+    /// </summary>
+    /// <param name="_filename"></param>
     void SaveMessagePack(string _filename)
     {
         _filename = Path.Combine(Application.streamingAssetsPath, _filename);
@@ -143,53 +152,41 @@ public class Work02 : MonoBehaviour
         BinaryWriter bw = new BinaryWriter(fs);
         var bytes = MessagePackSerializer.Serialize(myTransforms);
 
-        //最初にフレーム数を格納する
-        bw.Write(bytes.Length);
-        //シリアライズされたデータを格納する
-
         bw.Write(bytes);
+
         bw.Close();
         fs.Close();
         Debug.Log("save to" + _filename + " length is " + bytes.Length);
-        //var json = MessagePackSerializer.ToJson(bytes);
-        //Debug.Log(json);
+
     }
 
+    /// <summary>
+    /// ファイルから読み込んでデシリアライズする
+    /// </summary>
+    /// <param name="_filename"></param>
     void LoadMessagePack(string _filename)
     {
-
         _filename = Path.Combine(Application.streamingAssetsPath, _filename);
 
         Debug.Log("load from" + _filename);
 
+        //ファイルを開く
+        System.IO.FileStream fs = new System.IO.FileStream(_filename, System.IO.FileMode.Open, System.IO.FileAccess.Read);
 
-        //MyTransformのシリアライズ後のサイズを調べるために
-        //ダミーのオブジェクトを生成して値を設定する
-        var _my = new MyTransform();
-        _my.SetData(Recorder.transform, 0);
+        //ファイルを読み込むバイト型配列を作成する
+        byte[] bs = new byte[fs.Length];
+        
+        //ファイルの内容をすべて読み込む
+        fs.Read(bs, 0, bs.Length);
 
-        //サイズを調べてsizeOfObjに格納
-        int sizeOfObj = MessagePackSerializer.Serialize(_my).Length;
+        //一度Jsonとして取得してみる
+        //var loadJson = MessagePackSerializer.ToJson(bs);
+        //Debug.Log("loadJson string is " + loadJson);
 
-        //記録されたファイルを読み込み
-        FileStream fs = new FileStream(_filename, FileMode.Open, FileAccess.Read);
-        BinaryReader br = new BinaryReader(fs);
+        myTransforms = MessagePackSerializer.Deserialize<MyTransform[]>(bs).ToList();
 
-        var bytes = br.ReadBytes(sizeof(Int32)); //データサイズを読み込む
-        var length = BitConverter.ToInt32(bytes, 0);
-
-        bytes = br.ReadBytes(length);
-        Debug.Log("load length is " + length + "size of obj is " + sizeOfObj + "byte size is " + bytes.Length);
-
-        myTransforms.Clear();
-        var array = new MyTransform[length];
-        array = MessagePackSerializer.Deserialize<MyTransform[]>(bytes);
-        myTransforms = array.OfType<MyTransform>().ToList();
-        br.Close();
+        //閉じる
         fs.Close();
-         
     }
-
-
 }
 
