@@ -1,10 +1,12 @@
 ﻿using MessagePack;
-using MessagePack.Unity;
 using UnityEngine;
 
+
 [MessagePackObject]
-public class MyTransforms
+public class MsgPackSend
 {
+    [Key(4)]
+    public MyTransform[] array { get; set; }
 
 }
 [MessagePackObject]

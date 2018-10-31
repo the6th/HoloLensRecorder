@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !UNITY_WSA
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -910,3 +911,5 @@ namespace MessagePack.Internal
         }
     }
 }
+
+#endif

@@ -1,5 +1,5 @@
-﻿#if !UNITY_WSA
-
+﻿
+#if !UNITY_WSA
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
