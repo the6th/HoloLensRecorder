@@ -31,10 +31,10 @@ namespace HoloToolkit.Unity.InputModule
         // This enumeration gives the manager two different ways to handle the recognizer. Both will
         // set up the recognizer and add all keywords. The first causes the recognizer to start
         // immediately. The second allows the recognizer to be manually started at a later time.
-        public enum RecognizerStartBehavior { AutoStart, ManualStart }
+        public enum SpeechRecognizerStartBehavior { AutoStart, ManualStart }
 
         [Tooltip("Whether the recognizer should be activated on start.")]
-        public RecognizerStartBehavior RecognizerStart;
+        public SpeechRecognizerStartBehavior RecognizerStart;
 
         [Tooltip("The keywords to be recognized and optional keyboard shortcuts.")]
         public KeywordAndKeyCode[] Keywords;
@@ -70,7 +70,7 @@ namespace HoloToolkit.Unity.InputModule
                 keywordRecognizer = new KeywordRecognizer(keywords, recognitionConfidenceLevel);
                 keywordRecognizer.OnPhraseRecognized += KeywordRecognizer_OnPhraseRecognized;
 
-                if (RecognizerStart == RecognizerStartBehavior.AutoStart)
+                if (RecognizerStart == SpeechRecognizerStartBehavior.AutoStart)
                 {
                     keywordRecognizer.Start();
                 }
@@ -109,7 +109,7 @@ namespace HoloToolkit.Unity.InputModule
 
         protected virtual void OnEnable()
         {
-            if (keywordRecognizer != null && RecognizerStart == RecognizerStartBehavior.AutoStart)
+            if (keywordRecognizer != null && RecognizerStart == SpeechRecognizerStartBehavior.AutoStart)
             {
                 StartKeywordRecognizer();
             }

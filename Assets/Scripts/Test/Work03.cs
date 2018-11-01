@@ -6,26 +6,28 @@ using System.Linq;
 using UnityEngine;
 using MessagePack.Unity;
 using MessagePack.Resolvers;
+using System.Collections;
 
-
-public class Work02 : MonoBehaviour
+public class Work03 : MonoBehaviour
 {
     [SerializeField]
-    GameObject Recorder;
+    GameObject[] Recorders;
     [SerializeField]
-    GameObject Player;
+    GameObject[] Players;
     [SerializeField]
-    string saveFileName = "work02.dat";
+    string saveFileName = "work03.dat";
 
 
-    List<MyTransform> myTransforms;
+    List<MultiTransform> myTransforms;
 
     bool isRecording = false;
     bool isPlaying = false;
 
     float timeFromStart;
-    MyTransform startTrans;
+    MultiTransform[] startTrans;
     int counter = 0;
+
+    Color orginColor;
 
 #if UNITY_WSA
     //UWPではResolverの登録が必要
@@ -38,6 +40,7 @@ public class Work02 : MonoBehaviour
             MessagePack.Resolvers.GeneratedResolver.Instance,
             // finally, use builtin/primitive resolver(don't use StandardResolver, it includes dynamic generation)
             MessagePack.Resolvers.BuiltinResolver.Instance,
+
             //Vector3を取り扱うには、UnityResolverも登録しないといけない
             MessagePack.Unity.UnityResolver.Instance,
             AttributeFormatterResolver.Instance,
@@ -60,10 +63,19 @@ public class Work02 : MonoBehaviour
         RegistResolver();
 #endif
         //初期位置を記録する
-        startTrans = new MyTransform();
-        startTrans.SetData(Recorder.transform, 0);
 
-        myTransforms = new List<MyTransform>();
+        startTrans = new MultiTransform[Recorders.Length];
+
+        for (int i = 0; i < Recorders.Length; i++)
+        {
+            int id = i;
+            Recorders[i].GetComponent<Work03Cube>().OnCubeHit.AddListener(() => HitCube(id));
+            startTrans[i] = new MultiTransform();
+            startTrans[i].SetData(i, Recorders[i].transform, 0);
+        }
+
+        orginColor = Recorders[0].GetComponent<Renderer>().material.color;
+        myTransforms = new List<MultiTransform>();
 
 
 #if ENABLE_DOTNET
@@ -86,7 +98,52 @@ public class Work02 : MonoBehaviour
         //   TestObjList();
     }
 
+    private void OnDestroy()
+    {
+        for (int i = 0; i < Recorders.Length; i++)
+        {
+            int id = i;
+            Recorders[i].GetComponent<Work03Cube>().OnCubeHit.RemoveAllListeners();
+        }
+    }
 
+    void HitCube(int id)
+    {
+
+        if (isPlaying)
+        {
+            Players[id].GetComponent<Renderer>().material.color = Color.green;
+        }
+        else
+        {
+            float time = Time.realtimeSinceStartup - timeFromStart;
+            Recorders[id].GetComponent<Renderer>().material.color = Color.green;
+            var t = new MultiTransform();
+            t.ID = id;
+            t.Type = EVENT_TYPE.EVENT_1;
+            t.Time = time;
+            t.EventString = "hit[" + id +"]" + time;
+            myTransforms.Add(t);
+
+        }
+        StartCoroutine(ColorDefault(id));
+    }
+
+
+
+    IEnumerator ColorDefault(int id)
+    {
+        yield return new WaitForSeconds(0.05f);
+        if (isPlaying)
+        {
+            Players[id].GetComponent<Renderer>().material.color = orginColor;
+        }
+        else
+        {
+            Recorders[id].GetComponent<Renderer>().material.color = orginColor;
+        }
+
+    }
 
     // Update is called once per frame
     void Update()
@@ -95,34 +152,67 @@ public class Work02 : MonoBehaviour
 
         if (isRecording)
         {
-            MyTransform t = new MyTransform();
-            t.SetData(Recorder.transform, time);
-            myTransforms.Add(t);
-            counter++;
-
+            for (int i = 0; i < Recorders.Length; i++)
+            {
+                MultiTransform t = new MultiTransform();
+                t.SetData(i, Recorders[i].transform, time);
+                myTransforms.Add(t);
+                counter++;
+            }
         }
         else if (isPlaying)
         {
+
             //最後まで再生したらループする
-            if (counter >= myTransforms.Count)
+            if (counter < myTransforms.Count)
             {
-                StartPlay();
+                LoopPlay();
             }
             else
             {
-                var playTransform = myTransforms[counter];
-
-                if (time > playTransform.Time)
-                {
-                    Player.transform.position = playTransform.Pos;
-                    Player.transform.rotation = playTransform.Rot;
-                    Player.transform.localScale = playTransform.Scale;
-                    counter++;
-                }
+                StartPlay();
             }
         }
     }
 
+    private void LoopPlay()
+    {
+        float time = Time.realtimeSinceStartup - timeFromStart;
+
+        while (true)
+        {
+            if (myTransforms[counter] == null)
+            {
+                counter++;
+
+                break;
+            }
+
+            var playTransform = myTransforms[counter];
+
+            if (time > playTransform.Time)
+            {
+                switch (playTransform.Type)
+                {
+                    case EVENT_TYPE.TRANSFORM:
+                        Players[playTransform.ID].transform.position = playTransform.Pos;
+                        Players[playTransform.ID].transform.rotation = playTransform.Rot;
+                        Players[playTransform.ID].transform.localScale = playTransform.Scale;
+                        break;
+
+                    default:
+                        HitCube(playTransform.ID);
+                        break;
+                }
+                counter++;
+            }
+            else
+            {
+
+                break;
+            }
+        }
+    }
 
     private void OnGUI()
     {
@@ -152,8 +242,6 @@ public class Work02 : MonoBehaviour
         }
 
         GUI.Label(new Rect(20, 400, 100, 20), counter.ToString());
-
-
     }
 
 
@@ -161,41 +249,68 @@ public class Work02 : MonoBehaviour
 
     void StartPlay()
     {
+        Debug.Log("StartPlay");
+
         myTransforms.Clear();
+        orginColor = Recorders[0].GetComponent<Renderer>().material.color;
+
         LoadMessagePack(saveFileName);
 
         //再生開始
         counter = 0;
         timeFromStart = Time.realtimeSinceStartup;
-        Player.SetActive(true);
+
+        for (int i = 0; i < Players.Length; i++)
+        {
+            Players[i].SetActive(true);
+        }
     }
 
     void StopPlay()
     {
+        Debug.Log("StopPlay");
+
         //再生停止
-        Player.SetActive(false);
+        for (int i = 0; i < Players.Length; i++)
+        {
+            Players[i].SetActive(false);
+        }
     }
 
     void StartRecord()
     {
+        orginColor = Recorders[0].GetComponent<Renderer>().material.color;
+
         //録画開始
         myTransforms.Clear();
-        Recorder.transform.position = startTrans.Pos;
-        Recorder.transform.rotation = startTrans.Rot;
-        Recorder.transform.localScale = startTrans.Scale;
-        var rigdbody = Recorder.GetComponent<Rigidbody>();
-        rigdbody.velocity = Vector3.zero;
-        //     rigdbody.angularVelocity = Vector3.zero;
-        rigdbody.ResetInertiaTensor();
 
-        Recorder.SetActive(true);
+        for (int i = 0; i < Recorders.Length; i++)
+        {
+            var r = Recorders[i];
+            r.transform.position = startTrans[i].Pos;
+            r.transform.rotation = startTrans[i].Rot;
+            r.transform.localScale = startTrans[i].Scale;
+            var rigdbody = r.GetComponent<Rigidbody>();
+            rigdbody.velocity = Vector3.zero;
+            //     rigdbody.angularVelocity = Vector3.zero;
+            rigdbody.ResetInertiaTensor();
+
+            r.SetActive(true);
+        }
+
+
 
         timeFromStart = Time.realtimeSinceStartup;
     }
 
     void StopRecord()
     {
-        Recorder.SetActive(false);
+        for (int i = 0; i < Recorders.Length; i++)
+        {
+            var r = Recorders[i];
+            r.SetActive(false);
+        }
+
         SaveMessagePack(saveFileName);
     }
 
@@ -206,7 +321,7 @@ public class Work02 : MonoBehaviour
     void SaveMessagePack(string _filename)
     {
         //シリアライズデータを作成
-        var send = new MsgPackSend();
+        var send = new MsgPackMultiTransformSend();
         send.array = myTransforms.ToArray();
         var bytes = MessagePackSerializer.Serialize(send);
 
@@ -256,7 +371,7 @@ public class Work02 : MonoBehaviour
         var loadJson = MessagePackSerializer.ToJson(bs);
         Debug.Log("loadJson string is " + loadJson);
 
-        myTransforms = MessagePackSerializer.Deserialize<MsgPackSend>(bs).array.ToList();
+        myTransforms = MessagePackSerializer.Deserialize<MsgPackMultiTransformSend>(bs).array.ToList();
 
         //ファイルクローズ
 #if !UNITY_EDITOR && UNITY_WSA
