@@ -108,7 +108,8 @@ public class Work04 : MonoBehaviour
         for (int i = 0; i < Recorders.Length; i++)
         {
             int id = i;
-            Recorders[i].GetComponent<Work03Cube>().OnCubeHit.RemoveAllListeners();
+            if (Recorders[i].GetComponent<Work03Cube>() != null)
+                Recorders[i].GetComponent<Work03Cube>().OnCubeHit.RemoveAllListeners();
         }
         //録画再生ボタンの登録
         buttonRec.onClick.RemoveListener(RecClicked);
@@ -342,7 +343,7 @@ public class Work04 : MonoBehaviour
         for (int i = 0; i < Recorders.Length; i++)
         {
             var r = Recorders[i];
-            if(r.GetComponent<Rigidbody>() != null)
+            if (r.GetComponent<Rigidbody>() != null)
                 r.SetActive(false);
         }
 
