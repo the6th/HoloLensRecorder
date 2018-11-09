@@ -46,8 +46,8 @@ public class MultiTransform
         ID = id;
         Type = type;
         Time = time;
-        Pos = t.position;
-        Rot = t.rotation;
+        Pos = t.localPosition;
+        Rot = t.localRotation;
         Scale = t.localScale;
         EventString = event_string;
     }
