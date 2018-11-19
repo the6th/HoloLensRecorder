@@ -9,14 +9,14 @@ using MessagePack.Resolvers;
 using System.Collections;
 using UnityEngine.UI;
 
-public class Work04 : MonoBehaviour
+public class Work05 : MonoBehaviour
 {
     [SerializeField]
     GameObject[] Recorders;
     [SerializeField]
     GameObject[] Players;
     [SerializeField]
-    string saveFileName = "work04.dat";
+    string saveFileName = "work05.dat";
 
     [SerializeField]
     Button buttonRec;
@@ -25,6 +25,12 @@ public class Work04 : MonoBehaviour
 
     [SerializeField]
     Text Message;
+
+    public Transform neckBone;
+    public Transform headBone;
+    public Transform leftHandBone;
+    public Transform rightHandBone;
+
 
     List<MultiTransform> myTransforms;
 
@@ -87,7 +93,7 @@ public class Work04 : MonoBehaviour
             startTrans[i].SetData(i, Recorders[i].transform, 0);
         }
 
-        orginColor = Recorders[0].GetComponent<Renderer>().material.color;
+
         myTransforms = new List<MultiTransform>();
 
 
@@ -165,10 +171,15 @@ public class Work04 : MonoBehaviour
         {
             for (int i = 0; i < Recorders.Length; i++)
             {
-                MultiTransform t = new MultiTransform();
-                t.SetData(i, Recorders[i].transform, time);
-                myTransforms.Add(t);
-                counter++;
+                //変化があった時だけ記録する
+                if (Recorders[i].transform.hasChanged)
+                {
+                    MultiTransform t = new MultiTransform();
+
+                    t.SetData(i, Recorders[i].transform, time);
+                    myTransforms.Add(t);
+                    counter++;
+                }
 
             }
         }
@@ -212,6 +223,7 @@ public class Work04 : MonoBehaviour
                         Players[playTransform.ID].transform.localPosition = playTransform.Pos;
                         Players[playTransform.ID].transform.localRotation = playTransform.Rot;
                         Players[playTransform.ID].transform.localScale = playTransform.Scale;
+                        
                         break;
 
                     default:
@@ -289,7 +301,7 @@ public class Work04 : MonoBehaviour
         Debug.Log("StartPlay");
 
         myTransforms.Clear();
-        orginColor = Recorders[0].GetComponent<Renderer>().material.color;
+        orginColor = Players[0].GetComponent<Renderer>().material.color;
 
         LoadMessagePack(saveFileName);
 
@@ -317,7 +329,6 @@ public class Work04 : MonoBehaviour
 
     void StartRecord()
     {
-        orginColor = Recorders[0].GetComponent<Renderer>().material.color;
 
         //録画開始
         myTransforms.Clear();
@@ -345,6 +356,8 @@ public class Work04 : MonoBehaviour
 
     void StopRecord()
     {
+        Debug.Log("StopRecord");
+
         for (int i = 0; i < Recorders.Length; i++)
         {
             var r = Recorders[i];
